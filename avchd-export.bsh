@@ -1,7 +1,7 @@
 #!/bin/bash
 # ------------------------------------------------------------------------------
 # Spy at the Hatch
-# June 5, 2019
+# Updated: December 7, 2024
 # San Diego, CA
 # ------------------------------------------------------------------------------
 # Update this to the location of your FFMPEG, use the full path!
@@ -10,71 +10,102 @@ FFMPEG="/Applications/FFMPEG/ffmpeg"
 LOG="avchd-export.log"
 INPUT_DIR=$1
 OUTPUT_DIR=$2
+PRESET=$3
 
 echo "[*] AVCHD Export Tool start."
-echo "[ ] Developed by Spy at the Hatch." 
-echo "[ ] June 5, 2019.  San Diego, CA."
+echo "[ ] Developed by Spy at the Hatch."
+echo "[ ] Updated: December 7, 2024. San Diego, CA."
 
 # Print the usage of this script.
 function print_usage {
-   echo "[!] This script requires more information.  Please read below."
+   echo "[!] This script requires more information. Please read below."
    echo "[ ]"
-   echo "[ ] The AVCHD Export Tool will export all MTS files from your AVCHD collection"
-   echo "[ ] and convert them to MP4 format using the same codecs native to the AVCHD file,"
-   echo "[ ] resulting in a lossless file conversion."
+   echo "[ ] Usage: ./avchd-export.sh [Input Directory] [Output Directory] [Preset]"
    echo "[ ]"
-   echo "[ ] To use this script, you must download FFMPEG and update the FFMPEG variable"
-   echo "[ ] with its full path location."
+   echo "[ ] Available Presets:"
+   echo "[ ] 1. h264_aac   - H.264 video + AAC audio (MP4, general-purpose)"
+   echo "[ ] 2. h265_aac   - H.265/HEVC video + AAC audio (MP4, high-efficiency)"
+   echo "[ ] 3. vp9_opus   - VP9 video + Opus audio (WebM, web streaming)"
+   echo "[ ] 4. prores_pcm - ProRes video + PCM audio (MOV, professional editing)"
+   echo "[ ] 5. h264_ac3   - H.264 video + AC3 audio (MKV, surround sound)"
    echo "[ ]"
-   echo "[ ] Execute this script by ./avchd-export.bsh [Input Directory] [Output Directory]"
-   echo "[ ]"
-   echo "[ ] For example:"
-   echo "[ ] ./avchd-export.bsh /Applications/FFMPEG/ffmpeg /Users/spyatthehatch/Desktop/output"
+   echo "[ ] Example:"
+   echo "[ ] ./avchd-export.sh /path/to/input /path/to/output h264_aac"
 }
 
 # If the input directory was not passed as an argument, print the usage then quit.
-if [ -z $INPUT_DIR ]; then
+if [ -z "$INPUT_DIR" ]; then
    print_usage
    exit 1
 fi
 
 # If the output directory was not passed as an argument, set as the default.
-if [ -z $OUTPUT_DIR ]; then
+if [ -z "$OUTPUT_DIR" ]; then
    echo "[!] The output directory was not specified, using default avchd-export directory."
    OUTPUT_DIR="avchd-export"
 fi
 
+# Default preset if not specified
+if [ -z "$PRESET" ]; then
+   echo "[!] No preset specified, using default 'h264_aac'."
+   PRESET="h264_aac"
+fi
+
 # Check that FFMPEG binary exists.
-if [ ! -f $FFMPEG ]; then
+if [ ! -f "$FFMPEG" ]; then
    echo "[!] FFMPEG does not exist in the configured location."
    echo "[ ] Please update the FFMPEG variable and try again."
    exit 2
 fi
 
 # Check that the input directory exists.
-if [ ! -d $INPUT_DIR ]; then
+if [ ! -d "$INPUT_DIR" ]; then
    echo "[!] The configured input directory does not exist."
    echo "[ ] Please update the INPUT_DIR variable and try again."
    exit 3
 fi
 
-# Check that the output directory exists.  If it doesn't make it.
-if [ ! -d $OUTPUT_DIR ]; then
+# Check that the output directory exists. If it doesn't, create it.
+if [ ! -d "$OUTPUT_DIR" ]; then
    echo "[!] The configured output directory $OUTPUT_DIR does not exist."
    echo "[ ] Creating output directory."
-   mkdir $OUTPUT_DIR
+   mkdir -p "$OUTPUT_DIR"
 fi
 
-# For each file in the input directory, convert to mp4 using the native video/audio codecs.
-for file in `ls $INPUT_DIR/*.MTS | xargs -n 1 basename`
-do
-   name=`echo $file | awk -F '.' '{print $1}'`
-   echo "[ ] Exporting file: $INPUT_DIR/$file"
-   $FFMPEG -i $INPUT_DIR/$file -vcodec copy -acodec copy $OUTPUT_DIR/$name.mp4 >> $OUTPUT_DIR/$LOG 2>&1
+# Function to get FFmpeg options based on the selected preset.
+function get_ffmpeg_options {
+   case "$PRESET" in
+      h264_aac)
+         echo "-c:v libx264 -crf 20 -c:a aac -b:a 192k"
+         ;;
+      h265_aac)
+         echo "-c:v libx265 -crf 28 -preset slow -c:a aac -b:a 192k"
+         ;;
+      vp9_opus)
+         echo "-c:v libvpx-vp9 -b:v 2M -c:a libopus -b:a 128k"
+         ;;
+      prores_pcm)
+         echo "-c:v prores -profile:v 3 -c:a pcm_s16le"
+         ;;
+      h264_ac3)
+         echo "-c:v libx264 -crf 20 -c:a ac3 -b:a 384k"
+         ;;
+      *)
+         echo "[!] Invalid preset specified. Using default 'h264_aac'."
+         echo "-c:v libx264 -crf 20 -c:a aac -b:a 192k"
+         ;;
+   esac
+}
+
+# For each .MTS file in the input directory, convert using the selected preset.
+for file in "$INPUT_DIR"/*.MTS; do
+   name=$(basename "$file" .MTS)
+   echo "[ ] Exporting file: $file"
+   ffmpeg_options=$(get_ffmpeg_options)
+   "$FFMPEG" -i "$file" $ffmpeg_options "$OUTPUT_DIR/$name.mp4" >> "$OUTPUT_DIR/$LOG" 2>&1
 done
 
 # Finished processing the files, exit.
 echo "[ ] Output messages are logged in file: $OUTPUT_DIR/$LOG"
 echo "[ ] AVCHD Export Tool complete."
 exit 0
-
