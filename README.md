@@ -33,6 +33,7 @@ The script is executed as:
 
 ```bash
 ./avchd-export.sh [input directory] [optional: output directory] [optional: preset]
+```
 
 ### Available Presets
 
@@ -50,21 +51,25 @@ The script is executed as:
 
    ```bash
    ./avchd-export.sh /path/to/input
+   ```
 
 1. **Specify an Output Directory:**:
 
    ```bash
    ./avchd-export.sh /path/to/input /path/to/output
+   ```
 
 1. **Specify a Preset:**:
 
    ```bash
    ./avchd-export.sh /path/to/input /path/to/output h265_aac
+   ```
 
 1. **Full Example:**:
 
    ```bash
    ./avchd-export.sh /Volumes/SDCARD/PRIVATE/AVCHD/BDMV/STREAM ~/Desktop/avchd-output vp9_opus
+   ```
 
 ## Step-by-Step Instructions
 
